@@ -1,7 +1,6 @@
 <?php
 
 namespace App\Jobs;
-use App\Updates;
 
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -15,13 +14,20 @@ class SynchronizeUserDataJob implements ShouldQueue
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     /**
+     * The records of updates made by a user
+     *
+     * @var array
+     */
+    protected $updates;
+
+    /**
      * Create a new job instance.
      *
      * @return void
      */
-    public function __construct()
+    public function __construct($updates)
     {
-        //
+        $this->updates = $updates;
     }
 
     /**
@@ -32,17 +38,13 @@ class SynchronizeUserDataJob implements ShouldQueue
     public function handle()
     {
         $id = 0;
-        $updates = Updates::with('user:id,email')->take('1000')->get(['id','changes','user_id'])->toArray();
-        if($updates){
-            foreach ($updates as $key => $value) {
-                $id = $value['id'];
-                $message = "[$id] ";
-                foreach ($value['changes'] as $key => $value) {
-                    $message .= " $key: $value,";
-                }
-                Log::channel('logUserUpdate')->info($message);
-            };
-            Updates::where('id','<=', $id)->delete();
-        }
+        foreach ($this->updates as $key => $value) {
+            $id = $value['id'];
+            $message = "[$id] ";
+            foreach ($value['changes'] as $key => $value) {
+                $message .= " $key: $value,";
+            }
+            Log::channel('logUserUpdate')->info($message);
+        };
     }
 }

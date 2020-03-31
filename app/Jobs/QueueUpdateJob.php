@@ -1,6 +1,7 @@
 <?php
 
 namespace App\Jobs;
+use App\Updates;
 
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -30,8 +31,13 @@ class QueueUpdateJob implements ShouldQueue
      */
     public function handle()
     {
-        for ($i=1; $i <= 12 ; $i++) { 
-            SynchronizeUserDataJob::dispatch()->onQueue('updateSync');
+        for ($i=1; $i <= 12 ; $i++) {
+            $updates = Updates::with('user:id,email')->take('1000')->get(['id','changes','user_id'])->toArray();
+            if($updates){
+                SynchronizeUserDataJob::dispatch($updates)->onQueue('updateSync');
+                $last_id = end($updates)['id'];
+                Updates::where('id','<=', $last_id)->delete();
+            }
         }
     }
 }
