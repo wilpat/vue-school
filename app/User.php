@@ -1,6 +1,7 @@
 <?php
 
 namespace App;
+use Illuminate\Support\Arr;
 
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Foundation\Auth\User as Authenticatable;
@@ -44,4 +45,39 @@ class User extends Authenticatable
         $this->timezone = $this->timezones[$index];
         return $this;
     }
+
+    /**
+	* Records the update of a user
+	* 
+	* @param string $description
+    */
+    public function recordUpdate() {
+        $this->updates()->updateOrCreate(
+            ['user_id' => $this->id],
+            ['changes' => $this->getUpdateChanges()]
+        );
+    }
+
+    /**
+	* Fetch the updateChanges on the user model
+	* 
+	* @return array|null
+    */
+    public function getUpdateChanges() {
+        if($this->wasChanged()) { 
+            $userChanges = Arr::except($this->getChanges(), ['updated_at']);
+            $updates = Updates::where('user_id', $this->id)->first();
+            $updateTableChanges = array_merge($updates['changes'] ?? [], $userChanges);
+    		return $updateTableChanges;
+    	}
+    }
+
+    /**
+	* Gets the updates of a user
+	* 
+	* @return \Illuminate\Database\Eloquent\Relations\BelongsTo
+    */
+	public function updates(){
+		return $this->hasOne(Updates::class);
+	}
 }
